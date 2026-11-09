@@ -1,0 +1,603 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1E5A44">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E%E2%99%A0%3C/text%3E%3C/svg%3E">
+<title>Home Game Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap">
+<style>
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+[hidden]{display:none!important}
+/* Layout: quiet single column. Big figure for the pot, hairline lists for players, a floating glass action bar. One green accent. */
+:root{
+  --bg:#F3F4F1; --surface:#FFFFFF; --soft:#EAECE7; --line:#E0E3DD;
+  --ink:#121613; --muted:#6A716B; --faint:#A1A7A1;
+  --accent:#1E5A44; --accent-soft:#E0EBE4; --accent-ink:#FFFFFF;
+  --win:#1D774A; --lose:#C0412F; --warn:#94660E; --warn-soft:#F6EDD6;
+  --glass:rgba(255,255,255,.72); --shadow:0 12px 32px -14px rgba(20,30,24,.35);
+  --scrim:rgba(14,20,16,.32);
+  --f:"Geist",-apple-system,"Segoe UI",system-ui,sans-serif;
+  --mono:"Geist Mono",ui-monospace,"SF Mono",Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0C0F0D; --surface:#141815; --soft:#1A1F1B; --line:#232925;
+  --ink:#ECEFEA; --muted:#8D958F; --faint:#59615B;
+  --accent:#86CDA8; --accent-soft:#16261D; --accent-ink:#0A140F;
+  --win:#82D4A5; --lose:#F08E7F; --warn:#E3BC6C; --warn-soft:#262011;
+  --glass:rgba(24,29,26,.72); --shadow:0 14px 34px -12px rgba(0,0,0,.7); --scrim:rgba(0,0,0,.5);
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0C0F0D; --surface:#141815; --soft:#1A1F1B; --line:#232925;
+  --ink:#ECEFEA; --muted:#8D958F; --faint:#59615B;
+  --accent:#86CDA8; --accent-soft:#16261D; --accent-ink:#0A140F;
+  --win:#82D4A5; --lose:#F08E7F; --warn:#E3BC6C; --warn-soft:#262011;
+  --glass:rgba(24,29,26,.72); --shadow:0 14px 34px -12px rgba(0,0,0,.7); --scrim:rgba(0,0,0,.5);
+  color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--f);-webkit-font-smoothing:antialiased}
+.wrap{max-width:560px;margin:0 auto;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px));padding-block:20px 140px}
+h1,h2,h3{margin:0;font-weight:600;letter-spacing:-.025em;text-wrap:balance}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.muted{color:var(--muted)} .faint{color:var(--faint)}
+.pos{color:var(--win)} .neg{color:var(--lose)}
+.label{font-size:12px;color:var(--muted);font-weight:500}
+button{font:inherit;color:inherit;cursor:pointer;background:none;border:none;padding:0;-webkit-tap-highlight-color:transparent}
+button:disabled{opacity:.35;cursor:default}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:8px}
+svg.i{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+input,textarea{font:inherit;color:var(--ink);background:transparent;border:none;border-bottom:1px solid var(--line);border-radius:0;padding:10px 0;width:100%;transition:border-color .2s}
+input:focus,textarea:focus{outline:none;border-bottom-color:var(--accent)}
+input::placeholder,textarea::placeholder{color:var(--faint)}
+textarea{border:1px solid var(--line);border-radius:12px;padding:12px;resize:vertical}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 18px;border-radius:999px;font-weight:500;transition:transform .15s,background .2s,color .2s,opacity .2s}
+.btn:active:not(:disabled){transform:scale(.96)}
+.btn.primary{background:var(--accent);color:var(--accent-ink)}
+.btn.soft{background:var(--soft)}
+.btn.line{box-shadow:inset 0 0 0 1px var(--line)}
+.btn.danger{color:var(--lose);box-shadow:inset 0 0 0 1px currentColor}
+.btn.sm{min-height:34px;padding:0 13px;font-size:13px}
+.btn.wide{width:100%;min-height:52px;font-size:16px}
+.link{color:var(--muted);display:inline-flex;align-items:center;gap:4px;font-weight:500;min-height:36px;transition:color .15s}
+.link:hover{color:var(--ink)}
+
+/* avatar */
+.av{--c:#C94A3B;--s:36px;width:var(--s);height:var(--s);border-radius:50%;flex:none;display:grid;place-items:center;position:relative;
+  background:var(--c);color:#fff;font-weight:600;font-size:calc(var(--s)*.4);letter-spacing:0}
+.av::after{content:"";position:absolute;inset:3px;border-radius:50%;border:1.5px dashed rgba(255,255,255,.55)}
+.av.s{--s:26px} .av.l{--s:52px}
+.av.bank{--c:var(--faint)}
+
+/* home */
+.mark{font-size:13px;color:var(--muted);display:flex;gap:10px;align-items:center;letter-spacing:.02em}
+.mark i{font-style:normal;color:var(--accent)}
+.hero{padding:48px 0 32px}
+.hero h1{font-size:44px;line-height:1;font-weight:600;letter-spacing:-.045em;margin:14px 0 14px}
+.hero p{margin:0;color:var(--muted);max-width:34ch;font-size:16px}
+.list{display:flex;flex-direction:column}
+.item{display:flex;align-items:center;gap:14px;padding:16px 4px;border-bottom:1px solid var(--line);text-align:left;width:100%;transition:background .2s,padding .2s;border-radius:0}
+.item:first-child{border-top:1px solid var(--line)}
+.item:hover{background:linear-gradient(90deg,transparent,var(--soft) 20%,var(--soft) 80%,transparent)}
+.item .min{min-width:0;flex:1}
+.item .t1{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .t2{font-size:13px;color:var(--muted)}
+.dots{display:flex}
+.dots .av{margin-left:-8px;box-shadow:0 0 0 2px var(--bg)}
+.dots .av:first-child{margin-left:0}
+.state{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;white-space:nowrap}
+.state::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--faint)}
+.state.live::before{background:var(--win);animation:pulse 2s infinite}
+.empty{padding:40px 8px;text-align:center;color:var(--muted)}
+.empty h3{color:var(--ink);font-size:17px;margin-bottom:6px}
+.foot{font-size:12px;color:var(--faint);text-align:center;margin-top:28px}
+
+/* game */
+.bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px}
+.gtitle{font-size:15px;color:var(--muted);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pot{margin-bottom:28px}
+.pot .fig{font-family:var(--mono);font-size:clamp(48px,15vw,68px);font-weight:500;letter-spacing:-.05em;line-height:1;margin:6px 0 12px;font-variant-numeric:tabular-nums}
+.pot .meta{display:flex;gap:6px 18px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.pot .meta b{color:var(--ink);font-weight:500;font-family:var(--mono)}
+.tabs{display:flex;gap:24px;border-bottom:1px solid var(--line);margin-bottom:8px;position:relative}
+.tabs button{padding:10px 0 12px;color:var(--muted);font-weight:500;position:relative;transition:color .2s}
+.tabs button[aria-selected="true"]{color:var(--ink)}
+.tabs button[aria-selected="true"]::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;border-radius:2px;background:var(--ink);animation:grow .25s ease-out}
+.tabs .ct{font-family:var(--mono);font-size:12px;color:var(--faint);margin-left:4px}
+
+.prow{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;padding:14px 4px;border-bottom:1px solid var(--line);width:100%;text-align:left;transition:background .25s}
+.prow:hover{background:var(--soft)}
+.prow .min{min-width:0}
+.prow .nm{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.prow .sub{font-size:13px;color:var(--muted)}
+.prow .amt{text-align:right}
+.prow .amt .mono{font-size:16px;font-weight:500}
+.prow .amt .tiny{font-size:11px;color:var(--faint)}
+.prow.add{color:var(--muted)}
+.prow.add .plus{width:36px;height:36px;border-radius:50%;border:1.5px dashed var(--faint);display:grid;place-items:center}
+.flash{animation:flash 1s ease-out}
+.in{animation:rise .45s cubic-bezier(.2,.7,.2,1) both;animation-delay:calc(var(--i,0)*35ms)}
+
+/* dock */
+.dock{position:fixed;left:0;right:0;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:15;display:flex;justify-content:center;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));pointer-events:none;animation:rise .4s .1s cubic-bezier(.2,.7,.2,1) both}
+.dock .in2{pointer-events:auto;display:flex;gap:4px;padding:5px;border-radius:999px;background:var(--glass);backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4);box-shadow:var(--shadow),inset 0 0 0 1px var(--line)}
+.dock .btn{min-height:46px;padding:0 16px}
+.dock .btn:not(.primary):hover{background:var(--soft)}
+
+/* log */
+.lrow{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:start;padding:14px 4px;border-bottom:1px solid var(--line)}
+.lrow .dot{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--soft);color:var(--muted)}
+.lrow .dot.buyin{background:var(--accent-soft);color:var(--accent)}
+.lrow .dot svg.i{width:15px;height:15px}
+.lrow .min{min-width:0;font-size:14px;padding-top:4px}
+.lrow .tm{font-family:var(--mono);font-size:11px;color:var(--faint);margin-top:2px}
+.tag{font-size:11px;color:var(--warn);background:var(--warn-soft);padding:1px 7px;border-radius:99px;margin-left:6px;white-space:nowrap}
+.undo{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:var(--faint);transition:all .2s}
+.undo:hover{background:var(--soft);color:var(--ink)}
+.undo.sure{width:auto;padding:0 12px;color:var(--lose);box-shadow:inset 0 0 0 1px currentColor;font-size:13px;font-weight:500}
+
+/* settle */
+.sec{margin-top:28px}
+.sec>.label{display:block;margin-bottom:6px}
+.crow{display:grid;grid-template-columns:auto 1fr 104px;gap:14px;align-items:center;padding:10px 4px;border-bottom:1px solid var(--line)}
+.crow .min{min-width:0}
+.crow input{text-align:right;font-family:var(--mono);font-size:17px;padding:8px 0}
+.note{font-size:13px;color:var(--muted);margin:10px 0 0}
+.flag{font-size:13px;margin-top:14px;padding:12px 14px;border-radius:12px;display:flex;gap:10px;align-items:flex-start}
+.flag.ok{background:var(--accent-soft);color:var(--accent)}
+.flag.bad{background:var(--warn-soft);color:var(--warn)}
+.pay{display:grid;grid-template-columns:1fr auto auto;gap:14px;align-items:center;padding:14px 4px;border-bottom:1px solid var(--line);transition:opacity .3s}
+.pay .flow{display:flex;align-items:center;gap:8px;min-width:0;flex-wrap:wrap;font-weight:500}
+.pay .flow svg.i{color:var(--faint);width:16px;height:16px}
+.pay .mono{font-size:18px;font-weight:500}
+.tick{width:30px;height:30px;border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--line);display:grid;place-items:center;color:transparent;transition:all .2s}
+.tick svg.i{width:16px;height:16px;stroke-width:2.4}
+.pay.done{opacity:.4}
+.pay.done .mono{text-decoration:line-through}
+.pay.done .tick{background:var(--accent);box-shadow:none;color:var(--accent-ink)}
+.rrow{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:center;padding:12px 4px;border-bottom:1px solid var(--line)}
+.rbar{grid-column:2/3;height:4px;border-radius:4px;background:var(--soft);position:relative;overflow:hidden;margin-top:6px}
+.rbar span{position:absolute;top:0;bottom:0;border-radius:4px;transform-origin:left;animation:bar .7s cubic-bezier(.2,.7,.2,1) both}
+.rrow .mono{font-size:16px;font-weight:500}
+.actions{display:flex;gap:10px;margin-top:24px}
+.actions .btn{flex:1}
+
+/* sheet */
+.scrim{position:fixed;inset:0;z-index:20;background:var(--scrim);display:flex;align-items:flex-end;justify-content:center;animation:fade .2s ease-out}
+.sheet{width:100%;max-width:560px;background:var(--surface);border-radius:28px 28px 0 0;box-shadow:0 -10px 40px -10px rgba(0,0,0,.3);
+  padding:10px max(22px,env(safe-area-inset-right,0px)) calc(22px + env(safe-area-inset-bottom,0px)) max(22px,env(safe-area-inset-left,0px));max-height:92vh;overflow:auto;display:flex;flex-direction:column;gap:22px}
+.sheet.enter{animation:sheet .38s cubic-bezier(.16,1,.3,1)}
+.handle{width:36px;height:4px;border-radius:4px;background:var(--line);margin:0 auto -8px}
+.sheet h2{font-size:24px}
+.kicker{font-size:13px;color:var(--muted);margin-bottom:2px}
+.pick{display:flex;gap:6px;overflow-x:auto;margin:0 -6px;padding:4px 6px;scrollbar-width:none}
+.pick::-webkit-scrollbar{display:none}
+.pk{flex:none;width:64px;display:flex;flex-direction:column;align-items:center;gap:6px;padding:6px 0;border-radius:14px}
+.pk .av{transition:transform .25s cubic-bezier(.3,1.5,.5,1),box-shadow .2s,opacity .2s;opacity:.45}
+.pk span{font-size:12px;color:var(--muted);max-width:62px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pk[aria-pressed="true"] .av{opacity:1;transform:scale(1.12);box-shadow:0 0 0 2.5px var(--surface),0 0 0 4.5px var(--ink)}
+.pk[aria-pressed="true"] span{color:var(--ink);font-weight:500}
+.pk:disabled{opacity:.25}
+.amount{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;gap:8px}
+.amount input{text-align:center;font-family:var(--mono);font-size:44px;font-weight:500;letter-spacing:-.04em;border-bottom:none;padding:0}
+.round{width:44px;height:44px;border-radius:50%;background:var(--soft);display:grid;place-items:center;transition:transform .15s}
+.round:active{transform:scale(.9)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-top:10px}
+.chips button{padding:6px 12px;border-radius:99px;font-size:13px;box-shadow:inset 0 0 0 1px var(--line);color:var(--muted);transition:all .2s}
+.chips button[aria-pressed="true"]{background:var(--ink);color:var(--bg);box-shadow:none}
+.seg{display:flex;background:var(--soft);border-radius:999px;padding:3px}
+.seg button{flex:1;padding:9px 8px;border-radius:999px;font-size:13px;font-weight:500;color:var(--muted);transition:all .25s}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.say{font-size:14px;color:var(--muted);text-align:center;min-height:42px}
+.say b{color:var(--ink);font-weight:500}
+.foot2{display:flex;gap:10px}
+.foot2 .btn{flex:1}
+.foot2 .btn.primary{flex:2}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:18px 12px}
+.stats .mono{font-size:20px;font-weight:500}
+.trio{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.trio .btn{flex-direction:column;gap:4px;min-height:68px;border-radius:18px;font-size:13px}
+.check{display:flex;gap:10px;align-items:center;font-size:14px;color:var(--muted)}
+.check input{width:18px;height:18px;accent-color:var(--accent);padding:0}
+.toast{position:fixed;left:50%;bottom:calc(88px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:30;background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:999px;font-size:14px;font-weight:500;box-shadow:var(--shadow);animation:toast .35s cubic-bezier(.2,1.4,.4,1);max-width:calc(100% - 40px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+@keyframes rise{from{opacity:0;transform:translateY(10px)}}
+@keyframes sheet{from{transform:translateY(100%)}}
+@keyframes fade{from{opacity:0}}
+@keyframes grow{from{transform:scaleX(0)}}
+@keyframes toast{from{opacity:0;transform:translate(-50%,12px) scale(.94)}}
+@keyframes flash{0%{background:var(--accent-soft)}100%{background:transparent}}
+@keyframes pulse{50%{opacity:.35}}
+@keyframes bar{from{transform:scaleX(0)}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div id="dockL"></div>
+<div id="layer"></div>
+
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>Math.random().toString(36).slice(2,8)+Date.now().toString(36).slice(-4);
+const LS='home-game-ledger-v1';
+const COLORS=['#C94A3B','#3C72C4','#C39233','#7F58C2','#2A8A63','#D2733A','#BC4A7E','#2C93A6','#5F6B65','#8C9A36','#A85A44','#4F5FB8'];
+const ICON={
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  ret:'<path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/>',
+  xfer:'<path d="M7 7h13M16 3l4 4-4 4"/><path d="M17 17H4M8 13l-4 4 4 4"/>',
+  back:'<path d="m15 18-6-6 6-6"/>',
+  check:'<path d="m5 12 5 5L20 7"/>',
+  x:'<path d="M18 6 6 18M6 6l12 12"/>',
+  arrow:'<path d="M5 12h14M13 6l6 6-6 6"/>',
+  copy:'<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>',
+  edit:'<circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/>',
+  warn:'<path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>'
+};
+const ic=k=>`<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICON[k]}</svg>`;
+let store=null, games={}, synced=false, view={tab:'table'}, sheet=null, toastT=null, lastPot=null, animKey='';
+
+/* ---------- storage ---------- */
+function lsLoad(){try{return JSON.parse(localStorage.getItem(LS)||'{}')||{}}catch(e){return {}}}
+function lsSave(){try{localStorage.setItem(LS,JSON.stringify(games))}catch(e){}}
+games=lsLoad();
+const queues={};
+function persist(g){
+  g.updatedAt=Date.now(); games[g.id]=g; render();
+  if(!store){lsSave();return}
+  const body=JSON.parse(JSON.stringify(g));
+  queues[g.id]=(queues[g.id]||Promise.resolve()).then(()=>store.doc('games/'+g.id).set(body)).catch(e=>toast(e&&e.code==='quota_exceeded'?'Storage is full. Delete an old game first.':'Could not save. Check your connection.'));
+}
+function removeGame(id){
+  delete games[id]; location.hash=''; render();
+  if(store){store.doc('games/'+id).delete().catch(()=>toast('Could not delete that game.'))} else lsSave();
+}
+(async()=>{
+  try{store=await window.claude?.use?.('db')}catch(e){store=null}
+  if(!store){synced=true;render();return}
+  const timer=setTimeout(()=>{if(!synced){view.offline=true;render()}},10000);
+  store.collection('games').onSnapshot(snap=>{
+    const next={}; snap.docs.forEach(d=>{const v=d.data(); if(v) next[d.id]=JSON.parse(JSON.stringify(v))});
+    games=next;
+    if(!snap.metadata.fromCache){synced=true;view.offline=false;clearTimeout(timer)}
+    renderMain(); if(!sheet) renderSheet();
+  },()=>{clearTimeout(timer);synced=true;view.offline=true;render()});
+})();
+
+/* ---------- money ---------- */
+function fmt(g,x,sign){
+  const v=Math.round(x*100)/100;
+  const body=Math.abs(v).toLocaleString('en-IN',{maximumFractionDigits:2});
+  if(sign) return (v>0.004?'+':v<-0.004?'−':'')+body;
+  return (v<-0.004?'−':'')+body;
+}
+const n=x=>Number.isFinite(+x)?+x:0;
+const bi=x=>String(Math.round(x*100)/100);
+const amtOf=(g,e)=>e.amt!=null?n(e.amt):n(e.n)*n(g.buyIn);
+const plural=(k,w)=>`${bi(k)} ${w}${Math.abs(k-1)<1e-9?'':'s'}`;
+
+function compute(g){
+  const v=n(g.buyIn), cpb=n(g.chips)||v, cv=v/cpb;
+  const P={}; g.players.forEach((p,i)=>P[p.id]={...p,idx:i,bought:0,ret:0,recv:0,gave:0,invested:0,bal:0});
+  let bank=0;
+  for(const e of g.events){
+    const a=P[e.p]; if(!a) continue;
+    const m=amtOf(g,e);
+    if(e.type==='buyin'){a.bought+=m/v; a.invested+=m; if(!e.cash){a.bal-=m; bank+=m}}
+    else if(e.type==='return'){a.ret+=m/v; a.invested-=m; a.bal+=m; bank-=m}
+    else if(e.type==='transfer'){const b=P[e.to]; if(!b) continue; const val=e.chips*cv;
+      a.gave+=e.chips; b.recv+=e.chips; a.invested-=val; b.invested+=val;
+      if(!e.cash){a.bal+=val; b.bal-=val}}
+  }
+  const list=Object.values(P);
+  const issued=list.reduce((s,p)=>s+(p.bought-p.ret)*cpb,0);
+  const allIn=list.length>0&&list.every(p=>g.cashout&&g.cashout[p.id]!==undefined&&g.cashout[p.id]!=='');
+  let counted=0;
+  list.forEach(p=>{const c=n(g.cashout?.[p.id]); p.out=c; p.outVal=c*cv; counted+=c; p.net=p.outVal-p.invested; p.final=p.bal+p.outVal; p.held=(p.bought-p.ret)*v});
+  const bankFinal=bank-counted*cv;
+  const cashBuyins=g.events.filter(e=>e.type==='buyin'&&e.cash&&P[e.p]).reduce((s,e)=>s+amtOf(g,e),0);
+  return {P,list,v,cpb,cv,issued,counted,allIn,bankFinal,cashBuyins,diff:counted-issued,
+    netBuyins:list.reduce((s,p)=>s+p.bought-p.ret,0)};
+}
+function settle(g,c){
+  const nodes=c.list.map(p=>({id:p.id,name:p.name,idx:p.idx,amt:Math.round(p.final*100)/100}));
+  if(Math.abs(c.bankFinal)>0.004) nodes.push({id:'_bank',name:'Bank (cash box)',amt:Math.round(c.bankFinal*100)/100});
+  const debt=nodes.filter(x=>x.amt<-0.004).map(x=>({...x,amt:-x.amt})).sort((a,b)=>b.amt-a.amt);
+  const cred=nodes.filter(x=>x.amt>0.004).sort((a,b)=>b.amt-a.amt);
+  const out=[]; let i=0,j=0;
+  while(i<debt.length&&j<cred.length){
+    const m=Math.min(debt[i].amt,cred[j].amt);
+    if(m>0.004) out.push({from:debt[i],to:cred[j],amt:Math.round(m*100)/100,key:debt[i].id+'>'+cred[j].id});
+    debt[i].amt-=m; cred[j].amt-=m;
+    if(debt[i].amt<0.005) i++; if(cred[j].amt<0.005) j++;
+  }
+  return out;
+}
+
+/* ---------- bits ---------- */
+function av(p,cls=''){
+  if(!p||p.id==='_bank') return `<span class="av bank ${cls}">B</span>`;
+  const ini=(p.name||'?').trim().charAt(0).toUpperCase();
+  return `<span class="av ${cls}" style="--c:${COLORS[(p.idx??0)%COLORS.length]}">${esc(ini)}</span>`;
+}
+const nchips=x=>Math.round(x).toLocaleString('en-IN');
+function haptic(){try{navigator.vibrate&&navigator.vibrate(8)}catch(e){}}
+
+/* ---------- views ---------- */
+function current(){const id=(location.hash||'').replace(/^#game-/,'');return games[id]||null}
+function render(){renderMain();renderSheet()}
+function renderMain(){
+  const g=current(), act=document.activeElement, fid=act&&act.id&&$('#app').contains(act)?act.id:null;
+  const key=(g?g.id+':'+view.tab:'home'), anim=key!==animKey&&synced; if(synced) animKey=key;
+  view.anim=anim;
+  $('#app').innerHTML=g?gameView(g):homeView();
+  $('#dockL').innerHTML=g&&view.tab==='table'?dock(g):'';
+  if(fid){const f=document.getElementById(fid); if(f){f.focus(); if(f.select&&f.dataset.co!==undefined) f.select()}}
+  if(g) animatePot(g);
+}
+const inA=i=>view.anim?` in" style="--i:${i}`:'';
+function animatePot(g){
+  const el=$('#pot'); if(!el) return; const c=compute(g), to=c.issued*c.cv;
+  const from=lastPot&&lastPot.id===g.id?lastPot.v:0; lastPot={id:g.id,v:to};
+  if(from===to||matchMedia('(prefers-reduced-motion: reduce)').matches){el.textContent=fmt(g,to);return}
+  const t0=performance.now(), d=from===0?800:550;
+  const step=t=>{const k=Math.min(1,(t-t0)/d), e=1-Math.pow(1-k,4); el.textContent=fmt(g,Math.round(from+(to-from)*e)); if(k<1) requestAnimationFrame(step)};
+  requestAnimationFrame(step);
+}
+function homeView(){
+  const list=Object.values(games).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  return `<div class="hero"><div class="mark"><i>♠</i> Poker night</div><h1>Home Game<br>Ledger</h1>
+    <p>Track buy-ins, returns and chip transfers through the night. Settle up in a tap.</p></div>
+  <button class="btn primary wide" data-act="new">${ic('plus')} New game</button>
+  <div style="margin-top:36px">
+    ${!synced?`<div class="empty">Loading your games…</div>`:
+      list.length?`<div class="label" style="margin-bottom:6px">Games</div><div class="list">${list.map((g,i)=>{const c=compute(g);
+        return `<button class="item${inA(i)}" data-open="${g.id}"><div class="dots">${c.list.slice(0,3).map(p=>av(p,'s')).join('')}</div>
+        <div class="min"><div class="t1">${esc(g.name)}</div><div class="t2">${g.players.length} players · ${fmt(g,g.buyIn)} buy-in</div></div>
+        <span class="state ${g.closed?'':'live'}">${g.closed?'Settled':'Live'}</span></button>`}).join('')}</div>`
+      :`<div class="empty"><h3>No games yet</h3>Start one and add the players at the table.</div>`}
+  </div>
+  ${view.offline?`<div class="flag bad">${ic('warn')}<span>Saved games can't be reached right now. What's shown may be out of date.</span></div>`:''}
+  <p class="foot">${store?'Saved with this page · opens on any device you share it to':'Saved in this browser only'}</p>`;
+}
+function gameView(g){
+  const c=compute(g), t=view.tab;
+  return `<div class="bar"><button class="link" data-act="home">${ic('back')} Games</button>
+    <button class="link" data-act="gameMenu" aria-label="Edit game">${ic('edit')}</button></div>
+  <div class="pot"><div class="gtitle">${esc(g.name)}</div><div class="fig" id="pot">${fmt(g,c.issued*c.cv)}</div>
+    <div class="meta"><span>on the table</span><span><b>${bi(c.netBuyins)}</b> buy-ins</span><span><b>${nchips(c.issued)}</b> chips</span><span>1 buy-in <b>${fmt(g,c.v)}</b></span></div></div>
+  <div class="tabs" role="tablist">${[['table','Players',g.players.length],['log','Log',g.events.length],['settle','Settle','']].map(([k,l,ct])=>`<button role="tab" aria-selected="${t===k}" data-tab="${k}">${l}${ct!==''?`<span class="ct">${ct}</span>`:''}</button>`).join('')}</div>
+  ${t==='table'?tableTab(g,c):t==='log'?logTab(g,c):settleTab(g,c)}`;
+}
+function dock(g){
+  const c=compute(g), canRet=c.list.some(p=>p.held>0.004);
+  return `<div class="dock"><div class="in2">
+    <button class="btn primary" data-sheet="buyin" ${g.players.length?'':'disabled'}>${ic('plus')} Buy-in</button>
+    <button class="btn" data-sheet="return" ${canRet?'':'disabled'}>${ic('ret')} Return</button>
+    <button class="btn" data-sheet="transfer" ${g.players.length>1?'':'disabled'}>${ic('xfer')} Transfer</button>
+  </div></div>`;
+}
+function tableTab(g,c){
+  return `<div class="list">${c.list.map((p,i)=>`<button class="prow${view.bump&&view.bump.includes(p.id)?' flash':''}${inA(i)}" data-player="${p.id}">
+      ${av(p)}<div class="min"><div class="nm">${esc(p.name)}</div><div class="sub">${plural(p.bought-p.ret,'buy-in')} · in for <span class="mono">${fmt(g,p.invested)}</span></div></div>
+      <div class="amt"><div class="mono ${p.bal<-0.004?'neg':p.bal>0.004?'pos':'faint'}">${fmt(g,p.bal,true)}</div><div class="tiny">${p.bal<-0.004?'owes':p.bal>0.004?'owed':'square'}</div></div>
+    </button>`).join('')}
+    <button class="prow add${inA(c.list.length)}" data-act="addPlayer"><span class="plus">${ic('plus')}</span><span>Add player</span><span></span></button></div>`;
+}
+function describe(g,c,e){
+  const a=esc(c.P[e.p]?.name||'Removed'), b=esc(c.P[e.to]?.name||'Removed');
+  const m=amtOf(g,e);
+  if(e.type==='buyin') return `<b>${a}</b> bought in <span class="mono">${fmt(g,m)}</span>${e.cash?'<span class="tag">cash</span>':''}`;
+  if(e.type==='return') return `<b>${a}</b> returned <span class="mono">${fmt(g,m)}</span>`;
+  return `<b>${a}</b> → <b>${b}</b> <span class="mono">${fmt(g,e.chips*c.cv)}</span>${e.cash?'<span class="tag">cash</span>':''}`;
+}
+function logTab(g,c){
+  if(!g.events.length) return `<div class="empty"><h3>Nothing logged yet</h3>Buy-ins, returns and transfers show up here.</div>`;
+  const icn={buyin:'plus',return:'ret',transfer:'xfer'};
+  return `<div class="list">${[...g.events].reverse().map((e,i)=>`<div class="lrow${inA(i)}"><div class="dot ${e.type}">${ic(icn[e.type])}</div>
+    <div class="min">${describe(g,c,e)}<div class="tm">${new Date(e.t).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}</div></div>
+    <button class="undo ${view.confirmDel===e.id?'sure':''}" data-del="${e.id}" aria-label="Undo this entry">${view.confirmDel===e.id?'Remove':ic('x')}</button></div>`).join('')}</div>`;
+}
+function settleTab(g,c){
+  const rows=c.list.map((p,i)=>`<div class="crow${inA(i)}">${av(p,'s')}<label class="min" for="co-${p.id}"><div style="font-weight:500">${esc(p.name)}</div><div class="note" style="margin:0">in for ${fmt(g,p.invested)}</div></label>
+    <input id="co-${p.id}" inputmode="decimal" data-co="${p.id}" placeholder="chips" value="${g.cashout?.[p.id]??''}"></div>`).join('');
+  let out=`<div class="sec" style="margin-top:20px"><span class="label">Final chip counts</span><div class="list">${rows}</div></div>`;
+  if(!c.allIn) return out+`<p class="note">Enter every player's chips, 0 for anyone who busted, and the payments appear.</p>`;
+  out+=Math.abs(c.diff)<0.5?`<div class="flag ok">${ic('check')}<span>Chips match · ${nchips(c.counted)} counted, ${nchips(c.issued)} issued</span></div>`
+    :`<div class="flag bad">${ic('warn')}<span>Counted ${nchips(c.counted)} chips but ${nchips(c.issued)} were issued (${c.diff>0?'+':''}${nchips(c.diff)}, worth ${fmt(g,c.diff*c.cv,true)}). Recount or check the log. Payments below put the difference on the bank.</span></div>`;
+  const pays=settle(g,c);
+  out+=`<div class="sec"><span class="label">Who pays whom</span>
+    ${pays.length?`<div class="list">${pays.map((x,i)=>{const done=g.paid?.[x.key];return `<button class="pay ${done?'done':''}${inA(i)}" data-paid="${x.key}" aria-pressed="${!!done}">
+      <div class="flow">${av(x.from,'s')}${esc(x.from.name)} ${ic('arrow')} ${av(x.to,'s')}${esc(x.to.name)}</div><div class="mono">${fmt(g,x.amt)}</div><span class="tick">${ic('check')}</span></button>`}).join('')}</div>`
+    :`<p class="note">Everyone is square. No payments needed.</p>`}
+    ${c.cashBuyins>0?`<p class="note">${fmt(g,c.cashBuyins)} went into the cash box during the game, so the bank pays out from that.</p>`:''}</div>`;
+  const max=Math.max(1,...c.list.map(p=>Math.abs(p.net)));
+  out+=`<div class="sec"><span class="label">Results</span><div class="list">${[...c.list].sort((a,b)=>b.net-a.net).map((p,i)=>{const w=Math.abs(p.net)/max*50;
+    return `<div class="rrow${inA(i)}">${av(p,'s')}<div style="min-width:0"><div style="font-weight:500">${esc(p.name)}</div>
+      <div class="rbar"><span style="left:${p.net>=0?50:50-w}%;width:${w}%;background:${p.net>=0?'var(--win)':'var(--lose)'};animation-delay:${i*60}ms"></span></div></div>
+      <div class="mono ${p.net>0.004?'pos':p.net<-0.004?'neg':''}">${fmt(g,p.net,true)}</div></div>`}).join('')}</div></div>
+  <div class="actions"><button class="btn line" data-act="copy">${ic('copy')} Copy summary</button><button class="btn ${g.closed?'line':'primary'}" data-act="close">${g.closed?'Reopen':'Mark settled'}</button></div>`;
+  return out;
+}
+
+/* ---------- sheets ---------- */
+function openSheet(s){sheet={...s,fresh:true};haptic();renderSheet()}
+function closeSheet(){sheet=null;renderSheet()}
+function picker(c,field,sel,filter){
+  return `<div class="pick" role="group">${c.list.map(p=>{const ok=!filter||filter(p);
+    return `<button class="pk" data-pick="${field}" data-id="${p.id}" aria-pressed="${p.id===sel}" ${ok?'':'disabled'}>${av(p)}<span>${esc(p.name)}</span></button>`}).join('')}</div>`;
+}
+function amountBlock(g,c,s,presets){
+  return `<div><div class="amount"><button class="round" data-step="-1" aria-label="Half a buy-in less">${'<svg class="i" viewBox="0 0 24 24"><path d="M5 12h14"/></svg>'}</button>
+    <input id="s-amt" inputmode="decimal" value="${s.amt}" aria-label="Amount"><button class="round" data-step="1" aria-label="Half a buy-in more">${ic('plus')}</button></div>
+    <div class="chips">${presets.map(([val,l])=>`<button data-seta="${val}" aria-pressed="${Math.abs(n(s.amt)-val)<0.005}">${l}</button>`).join('')}</div></div>`;
+}
+const bPresets=c=>[0.5,1,2,3].map(x=>[x*c.v,x===0.5?'½ buy-in':plural(x,'buy-in')]);
+const foot=(label)=>`<div class="foot2"><button class="btn soft" data-act="cancel">Cancel</button><button class="btn primary" data-act="saveEv">${label}</button></div>`;
+function renderSheet(){
+  const L=$('#layer'); if(!sheet){L.innerHTML='';return}
+  const g=current(), s=sheet; if(s.kind!=='new'&&!g){sheet=null;L.innerHTML='';return}
+  const c=g?compute(g):null;
+  let body='';
+  if(s.kind==='new'||s.kind==='edit'){
+    const e=s.kind==='edit'?g:null;
+    body=`<div><div class="kicker">${e?'Settings':'♠ New game'}</div><h2>${e?'Edit game':'Set the table'}</h2></div>
+    <div><label class="label" for="g-name">Name</label><input id="g-name" value="${esc(e?.name||'Game night · '+new Date().toLocaleDateString('en-IN',{day:'numeric',month:'short'}))}"></div>
+    <div class="stats" style="gap:12px 18px"><div><label class="label" for="g-buy">One buy-in</label><input id="g-buy" class="mono" inputmode="decimal" value="${e?.buyIn??500}"></div>
+    <div><label class="label" for="g-chips">Chips per buy-in</label><input id="g-chips" class="mono" inputmode="decimal" value="${e?.chips??500}"></div></div>
+    ${e?'':`<div><label class="label" for="g-players">Players</label><textarea id="g-players" rows="4" placeholder="Aarav, Meera, Rohan…" style="margin-top:8px"></textarea></div>
+    <label class="check"><input type="checkbox" id="g-auto" checked> Everyone starts with one buy-in</label>`}
+    <div class="foot2"><button class="btn soft" data-act="cancel">Cancel</button><button class="btn primary" data-act="saveGame">${e?'Save':'Start game'}</button></div>
+    ${e?`<div style="display:flex;flex-direction:column;gap:6px"><span class="label">Players</span>${g.players.map((p,i)=>`<div class="row" style="display:flex;gap:12px;align-items:center">${av({...p,idx:i},'s')}<input data-rename="${p.id}" value="${esc(p.name)}" aria-label="Rename ${esc(p.name)}">${g.events.some(x=>x.p===p.id||x.to===p.id)?'':`<button class="btn sm soft" data-rmp="${p.id}">Remove</button>`}</div>`).join('')}
+      <p class="note">Players with log entries can't be removed. Undo their entries first.</p>
+      <button class="btn ${s.confirm?'danger':'soft'}" data-act="delGame" style="margin-top:10px">${s.confirm?'Tap again to delete for good':'Delete game'}</button></div>`:''}`;
+  } else if(s.kind==='addp'){
+    body=`<div><div class="kicker">Pull up a chair</div><h2>Add player</h2></div>
+    <div><label class="label" for="s-name">Name</label><input id="s-name" autocomplete="off" placeholder="Player name"></div>
+    <label class="check"><input type="checkbox" id="s-first" checked> Start with one buy-in (${fmt(g,c.v)})</label>
+    <div class="foot2"><button class="btn soft" data-act="cancel">Cancel</button><button class="btn primary" data-act="savePlayer">Add to table</button></div>`;
+  } else if(s.kind==='player'){
+    const p=c.P[s.p];
+    body=`<div style="display:flex;gap:16px;align-items:center">${av(p,'l')}<div style="min-width:0"><div class="kicker">${plural(p.bought-p.ret,'buy-in')} from the bank</div><h2 style="overflow-wrap:anywhere">${esc(p.name)}</h2></div></div>
+    <div class="stats"><div><div class="label">In for</div><div class="mono">${fmt(g,p.invested)}</div></div>
+      <div><div class="label">${p.bal<-0.004?'Owes so far':p.bal>0.004?'Owed so far':'Balance'}</div><div class="mono ${p.bal<-0.004?'neg':p.bal>0.004?'pos':''}">${fmt(g,p.bal,true)}</div></div>
+      <div><div class="label">Got from players</div><div class="mono">${fmt(g,p.recv*c.cv)}</div></div>
+      <div><div class="label">Gave to players</div><div class="mono">${fmt(g,p.gave*c.cv)}</div></div></div>
+    <div class="trio"><button class="btn primary" data-sheet="buyin" data-p="${p.id}">${ic('plus')}Buy-in</button>
+      <button class="btn soft" data-sheet="return" data-p="${p.id}" ${p.held>0.004?'':'disabled'}>${ic('ret')}Return</button>
+      <button class="btn soft" data-sheet="transfer" data-p="${p.id}" ${g.players.length>1?'':'disabled'}>${ic('xfer')}Transfer</button></div>`;
+  } else if(s.kind==='buyin'){
+    s.p=s.p||c.list[0]?.id; s.amt=s.amt??c.v; s.cash=s.cash??false;
+    body=`<div><div class="kicker">From the bank</div><h2>Buy-in</h2></div>
+    ${picker(c,'p',s.p)}
+    ${amountBlock(g,c,s,bPresets(c))}
+    <div class="seg"><button aria-pressed="${!s.cash}" data-cash="0">Settle at end</button><button aria-pressed="${s.cash}" data-cash="1">Paid cash now</button></div>
+    <div class="say" id="s-sum">${sumLine(g,c,s)}</div>${foot('Add buy-in')}`;
+  } else if(s.kind==='return'){
+    const elig=p=>p.held>0.004;
+    if(!s.p||!elig(c.P[s.p]||{})) s.p=c.list.find(elig)?.id;
+    const p=c.P[s.p], held=p?p.held:0;
+    s.amt=s.amt??Math.min(c.v,held);
+    const pre=[0.5,1,2].filter(x=>x*c.v<=held+1e-9).map(x=>[x*c.v,x===0.5?'½ buy-in':plural(x,'buy-in')]);
+    if(held>0.004&&!pre.some(x=>Math.abs(x[0]-held)<0.005)) pre.push([held,'All · '+fmt(g,held)]);
+    body=`<div><div class="kicker">Back to the bank</div><h2>Return</h2></div>
+    ${picker(c,'p',s.p,elig)}
+    ${amountBlock(g,c,s,pre)}
+    <div class="say" id="s-sum">${sumLine(g,c,s)}</div>${foot('Return')}`;
+  } else if(s.kind==='transfer'){
+    s.p=s.p||c.list[0]?.id; if(!s.to||s.to===s.p) s.to=c.list.find(p=>p.id!==s.p)?.id;
+    s.amt=s.amt??c.v; s.cash=s.cash??false;
+    body=`<div><div class="kicker">Player to player</div><h2>Transfer</h2></div>
+    <div><span class="label">From</span>${picker(c,'p',s.p)}</div>
+    <div style="margin-top:-12px"><span class="label">To</span>${picker(c,'to',s.to,p=>p.id!==s.p)}</div>
+    ${amountBlock(g,c,s,bPresets(c).slice(0,3))}
+    <div class="seg"><button aria-pressed="${!s.cash}" data-cash="0">Settle at end</button><button aria-pressed="${s.cash}" data-cash="1">Paid cash now</button></div>
+    <div class="say" id="s-sum">${sumLine(g,c,s)}</div>${foot('Transfer')}`;
+  } else if(s.kind==='copy'){
+    body=`<div><div class="kicker">Paste it in the group chat</div><h2>Summary</h2></div><textarea id="s-copy" readonly rows="10" class="mono" style="font-size:13px">${esc(s.text)}</textarea>
+    <div class="foot2"><button class="btn soft" data-act="cancel">Close</button><button class="btn primary" data-act="doCopy">${ic('copy')} Copy</button></div>`;
+  }
+  const sc=L.querySelector('.sheet')?.scrollTop||0;
+  L.innerHTML=`<div class="scrim" data-act="scrim" style="${s.fresh?'':'animation:none'}"><div class="sheet ${s.fresh?'enter':''}" role="dialog" aria-modal="true"><div class="handle"></div>${body}</div></div>`;
+  if(!s.fresh) L.querySelector('.sheet').scrollTop=sc;
+  if(s.fresh&&s.kind==='addp') setTimeout(()=>$('#s-name')?.focus(),80);
+  s.fresh=false;
+}
+function sumLine(g,c,s){
+  const val=n(s.amt), ch=val/c.cv;
+  const P=esc(c.P[s.p]?.name||'');
+  if(s.kind==='transfer'){const T=esc(c.P[s.to]?.name||'');
+    return `<b>${P}</b> gives <b>${T}</b> ${nchips(ch)} chips.<br>${T} ${s.cash?'paid':'owes'} ${P} <b class="mono">${fmt(g,val)}</b>${s.cash?' in cash.':' at the end.'}`}
+  if(s.kind==='buyin') return `<b>${P}</b> gets ${nchips(ch)} chips.<br>${s.cash?'Paid into the cash box.':'Added to what they owe.'}`;
+  return `<b>${P}</b> hands back ${nchips(ch)} chips.<br>Taken off what they owe.`;
+}
+
+/* ---------- actions ---------- */
+function toast(m){clearTimeout(toastT);$('.toast')?.remove();const t=document.createElement('div');t.className='toast';t.setAttribute('role','status');t.textContent=m;document.body.appendChild(t);toastT=setTimeout(()=>t.remove(),2200)}
+function clone(g){return JSON.parse(JSON.stringify(g))}
+function bump(ids){view.bump=ids;setTimeout(()=>{view.bump=null},1000)}
+function summaryText(g){
+  const c=compute(g), pays=settle(g,c);
+  const lines=[g.name,`1 buy-in = ${fmt(g,c.v)} = ${c.cpb} chips`,'',...[...c.list].sort((a,b)=>b.net-a.net).map(p=>`${p.name}: ${fmt(g,p.net,true)} (in ${fmt(g,p.invested)}, out ${fmt(g,p.outVal)})`),'','Payments:',...(pays.length?pays.map(x=>`• ${x.from.name} → ${x.to.name}: ${fmt(g,x.amt)}`):['Everyone is square.'])];
+  if(Math.abs(c.diff)>=0.5) lines.push('',`Chip count was off by ${Math.round(c.diff)} chips.`);
+  return lines.join('\n');
+}
+document.addEventListener('click',ev=>{
+  const el=ev.target.closest('[data-act],[data-open],[data-tab],[data-sheet],[data-player],[data-del],[data-step],[data-seta],[data-cash],[data-rmp],[data-pick],[data-paid]');
+  if(!el||el.disabled) return;
+  const g=current();
+  if(el.dataset.open){location.hash='game-'+el.dataset.open;view.tab='table';return}
+  if(el.dataset.tab){view.tab=el.dataset.tab;view.confirmDel=null;renderMain();return}
+  if(el.dataset.player){openSheet({kind:'player',p:el.dataset.player});return}
+  if(el.dataset.sheet){const keep=sheet&&sheet.kind==='player';sheet={kind:el.dataset.sheet,p:el.dataset.p,fresh:!keep};haptic();renderSheet();return}
+  if(el.dataset.pick){sheet[el.dataset.pick]=el.dataset.id; if(sheet.kind==='return') sheet.amt=undefined; haptic(); renderSheet();return}
+  if(el.dataset.paid){const x=clone(g);x.paid=x.paid||{};x.paid[el.dataset.paid]=!x.paid[el.dataset.paid];haptic();persist(x);return}
+  if(el.dataset.del){const id=el.dataset.del;
+    if(view.confirmDel!==id){view.confirmDel=id;renderMain();return}
+    const x=clone(g);x.events=x.events.filter(e=>e.id!==id);view.confirmDel=null;persist(x);toast('Entry removed');return}
+  if(el.dataset.step){const c=compute(g),h=c.v/2;sheet.amt=Math.max(h,Math.round((n($('#s-amt').value)+n(el.dataset.step)*h)*100)/100);haptic();renderSheet();return}
+  if(el.dataset.seta){sheet.amt=Math.round(n(el.dataset.seta)*100)/100;haptic();renderSheet();return}
+  if(el.dataset.cash){sheet.cash=el.dataset.cash==='1';renderSheet();return}
+  if(el.dataset.rmp){const x=clone(g);x.players=x.players.filter(p=>p.id!==el.dataset.rmp);persist(x);return}
+  const a=el.dataset.act;
+  if(a==='scrim'&&ev.target===el){closeSheet();return}
+  if(a==='cancel'){closeSheet();return}
+  if(a==='home'){location.hash='';return}
+  if(a==='new'){openSheet({kind:'new'});return}
+  if(a==='gameMenu'){openSheet({kind:'edit'});return}
+  if(a==='addPlayer'){openSheet({kind:'addp'});return}
+  if(a==='savePlayer'){const v=$('#s-name').value.trim(); if(!v){toast('Type a name first');return}
+    const x=clone(g),id=uid();x.players.push({id,name:v});
+    if($('#s-first').checked) x.events.push({id:uid(),t:Date.now(),type:'buyin',p:id,amt:n(x.buyIn),cash:false});
+    closeSheet();bump([id]);persist(x);toast(`${v} joined the table`);return}
+  if(a==='delGame'){if(!sheet.confirm){sheet.confirm=true;renderSheet();return}const id=g.id;closeSheet();removeGame(id);toast('Game deleted');return}
+  if(a==='saveGame'){
+    const buy=n($('#g-buy').value), chips=n($('#g-chips').value)||buy;
+    if(buy<=0){toast('Enter what one buy-in costs');return}
+    if(sheet.kind==='edit'){const x=clone(g);x.name=$('#g-name').value.trim()||x.name;x.buyIn=buy;x.chips=chips;
+      document.querySelectorAll('[data-rename]').forEach(i=>{const p=x.players.find(p=>p.id===i.dataset.rename);if(p&&i.value.trim())p.name=i.value.trim()});
+      closeSheet();persist(x);toast('Saved');return}
+    const names=$('#g-players').value.split(/[\n,]+/).map(s=>s.trim()).filter(Boolean);
+    const players=names.map(name=>({id:uid(),name})); const t=Date.now();
+    const g2={id:uid(),name:$('#g-name').value.trim()||'Home game',buyIn:buy,chips,players,
+      events:$('#g-auto').checked?players.map(p=>({id:uid(),t,type:'buyin',p:p.id,amt:buy,cash:false})):[],cashout:{},paid:{},createdAt:t};
+    closeSheet();location.hash='game-'+g2.id;view.tab='table';persist(g2);toast('Shuffle up and deal');return}
+  if(a==='saveEv'){
+    const x=clone(g), c=compute(g), s=sheet, m=Math.round(n($('#s-amt').value)*100)/100;
+    if(m<=0){toast('Enter an amount above 0');return}
+    if(!s.p){toast('Pick a player');return}
+    if(s.kind==='transfer'){
+      if(!s.to||s.to===s.p){toast('Pick who gets the chips');return}
+      x.events.push({id:uid(),t:Date.now(),type:'transfer',p:s.p,to:s.to,chips:Math.round(m/c.cv*100)/100,cash:!!s.cash});
+      closeSheet();bump([s.p,s.to]);haptic();persist(x);toast(`${c.P[s.p].name} → ${c.P[s.to].name} · ${fmt(g,m)}`);return}
+    if(s.kind==='return'){const p=c.P[s.p];if(m>p.held+0.005){toast(`${p.name} has only ${fmt(g,p.held)} from the bank`);return}}
+    x.events.push({id:uid(),t:Date.now(),type:s.kind,p:s.p,amt:m,cash:s.kind==='buyin'&&!!s.cash});
+    closeSheet();bump([s.p]);haptic();persist(x);toast(`${c.P[s.p].name} ${s.kind==='buyin'?'bought in':'returned'} ${fmt(g,m)}`);return}
+  if(a==='copy'){openSheet({kind:'copy',text:summaryText(g)});return}
+  if(a==='doCopy'){const ta=$('#s-copy');
+    try{navigator.clipboard.writeText(ta.value).then(()=>toast('Copied'),()=>{ta.select();toast('Selected · copy from here')})}catch(e){ta.select();toast('Selected · copy from here')}return}
+  if(a==='close'){const x=clone(g);x.closed=!x.closed;persist(x);toast(x.closed?'Marked settled':'Game reopened');return}
+});
+document.addEventListener('input',ev=>{
+  const t=ev.target;
+  if(t.id==='s-amt'&&sheet){sheet.amt=t.value;const g=current(),c=compute(g);$('#s-sum').innerHTML=sumLine(g,c,sheet);
+    document.querySelectorAll('[data-seta]').forEach(b=>b.setAttribute('aria-pressed',Math.abs(n(t.value)-n(b.dataset.seta))<0.005))}
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&sheet)closeSheet();
+  if(e.key==='Enter'&&e.target.id==='s-name'){e.preventDefault();$('[data-act="savePlayer"]')?.click()}
+  if(e.key==='Enter'&&e.target.id==='s-amt'){e.preventDefault();$('[data-act="saveEv"]')?.click()}
+});
+document.addEventListener('change',ev=>{
+  const t=ev.target, g=current(); if(!g) return;
+  if(t.dataset.co!==undefined){const x=clone(g);x.cashout=x.cashout||{};const v=t.value.trim();
+    if(v==='')delete x.cashout[t.dataset.co];else x.cashout[t.dataset.co]=n(v);persist(x)}
+});
+window.addEventListener('hashchange',()=>{sheet=null;view.confirmDel=null;lastPot=null;render();window.scrollTo(0,0)});
+render();
+</script>
+</body>
+</html>
